@@ -183,4 +183,11 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
         
         emit CreditsRetired(projectId, batchId, msg.sender, amount);
     }
+
+    /**
+     * @dev Required override for OpenZeppelin contracts
+     */
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
 }
