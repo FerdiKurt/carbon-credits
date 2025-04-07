@@ -60,4 +60,112 @@ contract CarbonCredits is ERC1155, AccessControl {
         _grantRole(VERIFIER_ROLE, msg.sender);
         _projectIdCounter.increment(); // Start with 1
     }
+
+     /**
+     * @dev Create a new carbon credit project
+     */
+    function createProject(
+        string memory name,
+        string memory description,
+        string memory location,
+        string memory methodology,
+        uint256 startDate,
+        uint256 endDate,
+        uint256 totalCredits
+    ) public returns (uint256) {
+        uint256 projectId = _projectIdCounter.current();
+        _projectIdCounter.increment();
+        
+        Project storage project = projects[projectId];
+        project.id = projectId;
+        project.name = name;
+        project.description = description;
+        project.location = location;
+        project.methodology = methodology;
+        project.startDate = startDate;
+        project.endDate = endDate;
+        project.totalCredits = totalCredits;
+        project.issuedCredits = 0;
+        project.projectOwner = msg.sender;
+        project.verified = false;
+        
+        emit ProjectCreated(projectId, name, msg.sender);
+        
+        return projectId;
+    }
+    
+    /**
+     * @dev Verify a carbon credit project
+     */
+    function verifyProject(uint256 projectId) public onlyRole(VERIFIER_ROLE) {
+        require(projects[projectId].id != 0, "Project does not exist");
+        require(!projects[projectId].verified, "Project already verified");
+        
+        projects[projectId].verified = true;
+        
+        emit ProjectVerified(projectId, msg.sender);
+    }
+    
+    /**
+     * @dev Issue carbon credits for a verified project
+     */
+    function issueCredits(
+        uint256 projectId,
+        uint256 amount,
+        uint256 vintage,
+        uint256 serialNumber
+    ) public onlyRole(ISSUER_ROLE) returns (uint256) {
+        Project storage project = projects[projectId];
+        
+        require(project.id != 0, "Project does not exist");
+        require(project.verified, "Project not verified");
+        require(project.issuedCredits + amount <= project.totalCredits, "Exceeds total project credits");
+        
+        uint256 batchId = _nextBatchId[projectId];
+        _nextBatchId[projectId]++;
+        
+        uint256 tokenId = (projectId * 1000000) + batchId;
+        
+        // Create credit batch
+        CreditBatch storage batch = creditBatches[projectId][batchId];
+        batch.projectId = projectId;
+        batch.batchId = batchId;
+        batch.amount = amount;
+        batch.vintage = vintage;
+        batch.serialNumber = serialNumber;
+        batch.retired = false;
+        
+        // Update project issued credits
+        project.issuedCredits += amount;
+        
+        // Mint new tokens to project owner
+        _mint(project.projectOwner, tokenId, amount, "");
+        
+        emit CreditsIssued(projectId, batchId, amount, vintage);
+        
+        return batchId;
+    }
+
+      /**
+     * @dev Retire carbon credits
+     */
+    function retireCredits(uint256 projectId, uint256 batchId, uint256 amount) public {
+        uint256 tokenId = (projectId * 1000000) + batchId;
+        
+        require(balanceOf(msg.sender, tokenId) >= amount, "Insufficient credits");
+        require(!creditBatches[projectId][batchId].retired, "Credits already retired");
+        
+        // Burn the tokens
+        _burn(msg.sender, tokenId, amount);
+        
+        // Update retirement tracking
+        retiredCredits[tokenId] += amount;
+        
+        // Mark as retired if all credits in batch are retired
+        if (retiredCredits[tokenId] >= creditBatches[projectId][batchId].amount) {
+            creditBatches[projectId][batchId].retired = true;
+        }
+        
+        emit CreditsRetired(projectId, batchId, msg.sender, amount);
+    }
 }
