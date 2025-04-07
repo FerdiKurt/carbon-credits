@@ -230,6 +230,20 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
             batch.retired
         );
     }
+    
+    /**
+     * @dev Override to provide enhanced metadata URI for each token
+     */
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        uint256 projectId = tokenId / 1000000;
+        uint256 batchId = tokenId % 1000000;
+        
+        return string(abi.encodePacked(
+            super.uri(tokenId),
+            "?projectId=", _toString(projectId),
+            "&batchId=", _toString(batchId)
+        ));
+    }
 
     /**
      * @dev Required override for OpenZeppelin contracts
@@ -237,6 +251,7 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+
     /**
      * @dev Helper function to convert uint to string
      */
