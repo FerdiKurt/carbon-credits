@@ -48,4 +48,16 @@ contract CarbonCredits is ERC1155, AccessControl {
     mapping(uint256 => uint256) private _nextBatchId;
     mapping(uint256 => uint256) public retiredCredits;
 
+    // Events
+    event ProjectCreated(uint256 indexed projectId, string name, address indexed owner);
+    event ProjectVerified(uint256 indexed projectId, address indexed verifier);
+    event CreditsIssued(uint256 indexed projectId, uint256 indexed batchId, uint256 amount, uint256 vintage);
+    event CreditsRetired(uint256 indexed projectId, uint256 indexed batchId, address indexed retiredBy, uint256 amount);
+    
+    constructor() ERC1155("https://carbon-credits-api.com/metadata/{id}") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ISSUER_ROLE, msg.sender);
+        _grantRole(VERIFIER_ROLE, msg.sender);
+        _projectIdCounter.increment(); // Start with 1
+    }
 }
