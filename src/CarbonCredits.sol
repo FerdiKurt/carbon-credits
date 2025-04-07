@@ -183,6 +183,53 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
         
         emit CreditsRetired(projectId, batchId, msg.sender, amount);
     }
+     /**
+     * @dev Get project details
+     */
+    function getProject(uint256 projectId) public view returns (
+        string memory name,
+        string memory description,
+        string memory location,
+        string memory methodology,
+        uint256 startDate,
+        uint256 endDate,
+        uint256 totalCredits,
+        uint256 issuedCredits,
+        address projectOwner,
+        bool verified
+    ) {
+        Project storage project = projects[projectId];
+        return (
+            project.name,
+            project.description,
+            project.location,
+            project.methodology,
+            project.startDate,
+            project.endDate,
+            project.totalCredits,
+            project.issuedCredits,
+            project.projectOwner,
+            project.verified
+        );
+    }
+    
+    /**
+     * @dev Get credit batch details
+     */
+    function getCreditBatch(uint256 projectId, uint256 batchId) public view returns (
+        uint256 amount,
+        uint256 vintage,
+        uint256 serialNumber,
+        bool retired
+    ) {
+        CreditBatch storage batch = creditBatches[projectId][batchId];
+        return (
+            batch.amount,
+            batch.vintage,
+            batch.serialNumber,
+            batch.retired
+        );
+    }
 
     /**
      * @dev Required override for OpenZeppelin contracts
