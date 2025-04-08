@@ -10,10 +10,10 @@ import "./interfaces/Errors.sol";
 
 
 /**
- * @title CarbonCreditMarketplaceERC20
- * @dev Marketplace for trading carbon credits with USDC and USDT payment options
- * @notice This contract allows users to list and purchase carbon credits using stablecoins
- */
+* @title CarbonCreditMarketplaceERC20
+* @dev Marketplace for trading carbon credits with USDC and USDT payment options
+* @notice This contract allows users to list and purchase carbon credits using stablecoins
+*/
 contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
     using SafeERC20 for IERC20;
     
@@ -21,10 +21,10 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
     IERC20 public usdc;
     IERC20 public usdt;
     
-     /**
-     * @notice Structure representing a carbon credit listing
-     * @dev Used to store all information about a carbon credit listing
-     */
+    /**
+    * @notice Structure representing a carbon credit listing
+    * @dev Used to store all information about a carbon credit listing
+    */
     struct Listing {
         address seller;
         uint256 tokenId;
@@ -61,13 +61,13 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
     event FeeCollectorUpdated(address newFeeCollector);
     
     /**
-     * @notice Constructor to initialize the marketplace
-     * @dev Sets up the marketplace with carbon credits contract and supported stablecoins
-     * @param _carbonCreditsAddress Address of the Carbon Credits ERC1155 contract
-     * @param _usdcAddress Address of the USDC stablecoin contract
-     * @param _usdtAddress Address of the USDT stablecoin contract
-     * @param _feeCollector Address that will receive platform fees
-     */
+    * @notice Constructor to initialize the marketplace
+    * @dev Sets up the marketplace with carbon credits contract and supported stablecoins
+    * @param _carbonCreditsAddress Address of the Carbon Credits ERC1155 contract
+    * @param _usdcAddress Address of the USDC stablecoin contract
+    * @param _usdtAddress Address of the USDT stablecoin contract
+    * @param _feeCollector Address that will receive platform fees
+    */
     constructor(
         address _carbonCreditsAddress,
         address _usdcAddress,
