@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 
 /**
- * @title ICarbonCredits
- * @dev Interface for the Carbon Credits ERC1155 token with project management functionality
- */
+* @title ICarbonCredits
+* @dev Interface for the Carbon Credits ERC1155 token with project management functionality
+*/
 interface ICarbonCredits {
     function balanceOf(address account, uint256 id) external view returns (uint256);
     function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;

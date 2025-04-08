@@ -7,10 +7,10 @@ import "./utils/Counters.sol";
 import "./interfaces/Errors.sol";
 
 /**
- * @title CarbonCredits
- * @notice Smart contract for tokenizing, issuing, transferring, and retiring carbon credits
- * @dev Implements ERC1155 standard for carbon credit tokenization with role-based access control
- */
+* @title CarbonCredits
+* @notice Smart contract for tokenizing, issuing, transferring, and retiring carbon credits
+* @dev Implements ERC1155 standard for carbon credit tokenization with role-based access control
+*/
 contract CarbonCredits is ERC1155, AccessControl, Errors {
     using Counters for Counters.Counter;
     
@@ -58,9 +58,9 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     event CreditsRetired(uint256 indexed projectId, uint256 indexed batchId, address indexed retiredBy, uint256 amount);
     
     /**
-     * @notice Initializes the CarbonCredits contract
-     * @dev Sets up initial roles and metadata URI base
-     */
+    * @notice Initializes the CarbonCredits contract
+    * @dev Sets up initial roles and metadata URI base
+    */
     constructor() ERC1155("https://carbon-credits-api.com/metadata/{id}") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ISSUER_ROLE, msg.sender);
@@ -68,18 +68,18 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
         _projectIdCounter.increment(); // Start with 1
     }
 
-     /**
-     * @notice Creates a new carbon credit project
-     * @dev Projects must be verified before credits can be issued
-     * @param name The name of the project
-     * @param description A detailed description of the project
-     * @param location The geographical location of the project
-     * @param methodology The carbon accounting methodology used
-     * @param startDate The start date of the project (timestamp)
-     * @param endDate The end date of the project (timestamp)
-     * @param totalCredits The total credits that can be issued for this project
-     * @return projectId The ID of the newly created project
-     */
+    /**
+    * @notice Creates a new carbon credit project
+    * @dev Projects must be verified before credits can be issued
+    * @param name The name of the project
+    * @param description A detailed description of the project
+    * @param location The geographical location of the project
+    * @param methodology The carbon accounting methodology used
+    * @param startDate The start date of the project (timestamp)
+    * @param endDate The end date of the project (timestamp)
+    * @param totalCredits The total credits that can be issued for this project
+    * @return projectId The ID of the newly created project
+    */
     function createProject(
         string memory name,
         string memory description,
@@ -109,12 +109,12 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
         
         return projectId;
     }
-    
+
     /**
-     * @notice Verifies a carbon credit project
-     * @dev Only accounts with VERIFIER_ROLE can verify projects
-     * @param projectId The ID of the project to verify
-     */
+    * @notice Verifies a carbon credit project
+    * @dev Only accounts with VERIFIER_ROLE can verify projects
+    * @param projectId The ID of the project to verify
+    */
     function verifyProject(uint256 projectId) public onlyRole(VERIFIER_ROLE) {
         Project storage project = projects[projectId];
 
@@ -129,16 +129,16 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
         
         emit ProjectVerified(projectId, msg.sender);
     }
-    
+
     /**
-     * @notice Issues carbon credits for a verified project
-     * @dev Only accounts with ISSUER_ROLE can issue credits
-     * @param projectId The ID of the project to issue credits for
-     * @param amount The amount of credits to issue
-     * @param vintage The vintage year of the credits
-     * @param serialNumber The serial number for the credit batch
-     * @return batchId The ID of the newly created credit batch
-     */
+    * @notice Issues carbon credits for a verified project
+    * @dev Only accounts with ISSUER_ROLE can issue credits
+    * @param projectId The ID of the project to issue credits for
+    * @param amount The amount of credits to issue
+    * @param vintage The vintage year of the credits
+    * @param serialNumber The serial number for the credit batch
+    * @return batchId The ID of the newly created credit batch
+    */
     function issueCredits(
         uint256 projectId,
         uint256 amount,
@@ -185,12 +185,12 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     }
 
     /**
-     * @notice Retires carbon credits permanently
-     * @dev Retired credits cannot be transferred or used again
-     * @param projectId The ID of the project
-     * @param batchId The ID of the credit batch
-     * @param amount The amount of credits to retire
-     */
+    * @notice Retires carbon credits permanently
+    * @dev Retired credits cannot be transferred or used again
+    * @param projectId The ID of the project
+    * @param batchId The ID of the credit batch
+    * @param amount The amount of credits to retire
+    */
     function retireCredits(uint256 projectId, uint256 batchId, uint256 amount) public {
         uint256 tokenId = (projectId * 1000000) + batchId;
         uint256 balance = balanceOf(msg.sender, tokenId);
@@ -218,19 +218,19 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     }
 
     /**
-     * @notice Gets all details of a carbon project
-     * @param projectId The ID of the project
-     * @return name The name of the project
-     * @return description The description of the project
-     * @return location The location of the project
-     * @return methodology The methodology used by the project
-     * @return startDate The start date of the project
-     * @return endDate The end date of the project
-     * @return totalCredits The total credits allocated to the project
-     * @return issuedCredits The amount of credits already issued
-     * @return projectOwner The address of the project owner
-     * @return verified Whether the project has been verified
-     */
+    * @notice Gets all details of a carbon project
+    * @param projectId The ID of the project
+    * @return name The name of the project
+    * @return description The description of the project
+    * @return location The location of the project
+    * @return methodology The methodology used by the project
+    * @return startDate The start date of the project
+    * @return endDate The end date of the project
+    * @return totalCredits The total credits allocated to the project
+    * @return issuedCredits The amount of credits already issued
+    * @return projectOwner The address of the project owner
+    * @return verified Whether the project has been verified
+    */
     function getProject(uint256 projectId) public view returns (
         string memory name,
         string memory description,
@@ -259,14 +259,14 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     }
     
     /**
-     * @notice Gets details of a specific credit batch
-     * @param projectId The ID of the project
-     * @param batchId The ID of the batch
-     * @return amount The amount of credits in the batch
-     * @return vintage The vintage year of the credits
-     * @return serialNumber The serial number of the batch
-     * @return retired Whether the batch has been fully retired
-     */
+    * @notice Gets details of a specific credit batch
+    * @param projectId The ID of the project
+    * @param batchId The ID of the batch
+    * @return amount The amount of credits in the batch
+    * @return vintage The vintage year of the credits
+    * @return serialNumber The serial number of the batch
+    * @return retired Whether the batch has been fully retired
+    */
     function getCreditBatch(uint256 projectId, uint256 batchId) public view returns (
         uint256 amount,
         uint256 vintage,
@@ -283,11 +283,11 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     }
     
     /**
-     * @notice Returns the metadata URI for a specific token
-     * @dev Overrides ERC1155 uri function to include project and batch IDs
-     * @param tokenId The ID of the token
-     * @return The URI for the token metadata
-     */
+    * @notice Returns the metadata URI for a specific token
+    * @dev Overrides ERC1155 uri function to include project and batch IDs
+    * @param tokenId The ID of the token
+    * @return The URI for the token metadata
+    */
     function uri(uint256 tokenId) public view override returns (string memory) {
         uint256 projectId = tokenId / 1000000;
         uint256 batchId = tokenId % 1000000;
@@ -300,21 +300,21 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     }
 
     /**
-     * @notice Checks if a contract implements a specific interface
-     * @dev Required override for OpenZeppelin contracts
-     * @param interfaceId The interface identifier to check
-     * @return True if the contract implements the interface, false otherwise
-     */
+    * @notice Checks if a contract implements a specific interface
+    * @dev Required override for OpenZeppelin contracts
+    * @param interfaceId The interface identifier to check
+    * @return True if the contract implements the interface, false otherwise
+    */
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
     /**
-     * @notice Converts a uint256 to its string representation
-     * @dev Helper function for URI generation
-     * @param value The uint256 to convert
-     * @return The string representation of the uint256
-     */
+    * @notice Converts a uint256 to its string representation
+    * @dev Helper function for URI generation
+    * @param value The uint256 to convert
+    * @return The string representation of the uint256
+    */
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
             return "0";
