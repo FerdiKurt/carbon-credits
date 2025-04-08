@@ -116,14 +116,16 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
      * @param projectId The ID of the project to verify
      */
     function verifyProject(uint256 projectId) public onlyRole(VERIFIER_ROLE) {
-        if(projects[projectId].id == 0) {
-            revert ProjectDoesNotExist();
+        Project storage project = projects[projectId];
+
+        if(project.id == 0) {
+            revert ProjectNotFound(projectId);
         }
-        if(projects[projectId].verified) {
-            revert ProjectAlreadyVerified();
+        if(project.verified) {
+            revert ProjectAlreadyVerified(projectId);
         }
         
-        projects[projectId].verified = true;
+        project.verified = true;
         
         emit ProjectVerified(projectId, msg.sender);
     }
@@ -145,14 +147,16 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     ) public onlyRole(ISSUER_ROLE) returns (uint256) {
         Project storage project = projects[projectId];
         
-        if(projects[projectId].id == 0) {
-            revert ProjectDoesNotExist();
+        if(project.id == 0) {
+            revert ProjectNotFound(projectId);
         }
-        if(projects[projectId].verified) {
-            revert ProjectAlreadyVerified();
+        if(!project.verified) {
+            revert ProjectNotVerified(projectId);
         }
-        if(project.issuedCredits + amount > project.totalCredits) {
-            revert AllowedLimitExceeded();
+        
+        uint256 remainingCredits = project.totalCredits - project.issuedCredits;
+        if (amount > remainingCredits) {
+            revert ExceedsTotalCredits(projectId, amount, remainingCredits);
         }
         
         uint256 batchId = _nextBatchId[projectId];
@@ -189,12 +193,14 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
      */
     function retireCredits(uint256 projectId, uint256 batchId, uint256 amount) public {
         uint256 tokenId = (projectId * 1000000) + batchId;
+        uint256 balance = balanceOf(msg.sender, tokenId);
 
-        if(balanceOf(msg.sender, tokenId) < amount) {
-            revert InsufficentCredits();
+
+        if(balance < amount) {
+            revert InsufficientCredits(tokenId, msg.sender, amount, balance);
         }
         if(creditBatches[projectId][batchId].retired) {
-            revert CreditsAlreadyRetired();
+            revert BatchAlreadyRetired(projectId, batchId);
         }
         
         // Burn the tokens
