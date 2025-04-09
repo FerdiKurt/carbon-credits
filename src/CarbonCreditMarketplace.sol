@@ -186,4 +186,42 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
         
         emit CreditsPurchased(listingId, msg.sender, amount, totalPrice, listing.paymentToken);
     }
+    
+    /**
+    * @notice Get details about a specific listing
+    * @param listingId The ID of the listing to query
+    * @return seller Address of the seller
+    * @return tokenId ID of the carbon credit token
+    * @return amount Amount of credits available
+    * @return pricePerCredit Price per credit in payment token's smallest unit
+    * @return paymentToken Address of the payment token
+    * @return active Whether the listing is active
+    */
+    function getListing(uint256 listingId) public view returns (
+        address seller,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 pricePerCredit,
+        address paymentToken,
+        bool active
+    ) {
+        Listing storage listing = listings[listingId];
+        return (
+            listing.seller,
+            listing.tokenId,
+            listing.amount,
+            listing.pricePerCredit,
+            listing.paymentToken,
+            listing.active
+        );
+    }
+    /**
+    * @notice Check if a token is supported for payment
+    * @dev Currently only USDC and USDT are supported
+    * @param tokenAddress The address of the token to check
+    * @return True if the token is supported, false otherwise
+    */
+    function isTokenSupported(address tokenAddress) public view returns (bool) {
+        return tokenAddress == address(usdc) || tokenAddress == address(usdt);
+    }
 }
