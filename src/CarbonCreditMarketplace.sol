@@ -81,4 +81,66 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
         platformFeePercentage = 250; // 2.5% fee by default
         _listingIdCounter = 1;
     }
+
+    //TODO: only verified sellers and approved tokens
+    /**
+    * @notice Create a listing to sell carbon credits with stablecoin as payment
+    * @dev Seller must have sufficient balance of carbon credits
+    * @param tokenId The ID of the carbon credit token
+    * @param amount The amount of credits to sell
+    * @param pricePerCredit The price per credit in the smallest unit of the payment token
+    * @param paymentToken The address of the payment token (must be USDC or USDT)
+    * @return The ID of the newly created listing
+    */
+    function createListing(
+        uint256 tokenId, 
+        uint256 amount, 
+        uint256 pricePerCredit,
+        address paymentToken
+    ) public returns (uint256) {
+        uint256 balance = carbonCredits.balanceOf(msg.sender, tokenId);
+        if (balance < amount) {
+            revert InsufficientCredits(tokenId, msg.sender, amount, balance);
+        }
+        
+        if (paymentToken != address(usdc) && paymentToken != address(usdt)) {
+            revert UnsupportedPaymentToken(paymentToken);
+        }
+        
+        uint256 listingId = _listingIdCounter++;
+        
+        Listing storage listing = listings[listingId];
+        listing.seller = msg.sender;
+        listing.tokenId = tokenId;
+        listing.amount = amount;
+        listing.pricePerCredit = pricePerCredit;
+        listing.paymentToken = paymentToken;
+        listing.active = true;
+        
+        emit ListingCreated(listingId, tokenId, msg.sender, amount, pricePerCredit, paymentToken);
+        
+        return listingId;
+    }
+    
+    //TODO: only multisig-admins or Seller can cancel listing
+    /**
+    * @notice Cancel an active listing
+    * @dev Only the seller of the listing can cancel it
+    * @param listingId The ID of the listing to cancel
+    */
+    function cancelListing(uint256 listingId) public {
+        Listing storage listing = listings[listingId];
+        
+        if (!listing.active) {
+            revert ListingNotActive(listingId);
+        }
+        
+        if (listing.seller != msg.sender) {
+            revert NotSeller(msg.sender, listing.seller);
+        }
+        
+        listing.active = false;
+        
+        emit ListingCancelled(listingId);
+    }
 }
