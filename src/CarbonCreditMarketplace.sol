@@ -143,4 +143,47 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
         
         emit ListingCancelled(listingId);
     }
+
+    /**
+    * @notice Purchase carbon credits from a listing using stablecoins
+    * @dev The buyer must have approved this contract to spend their tokens
+    * @param listingId The ID of the listing to purchase from
+    * @param amount The amount of credits to purchase
+    */
+    function purchaseCredits(uint256 listingId, uint256 amount) public nonReentrant {
+        Listing storage listing = listings[listingId];
+        
+        if (!listing.active) {
+            revert ListingNotActive(listingId);
+        }
+        
+        if (amount > listing.amount) {
+            revert ExceedsAvailableAmount(listing.amount, amount);
+        }
+        
+        uint256 totalPrice = amount * listing.pricePerCredit;
+        uint256 platformFee = (totalPrice * platformFeePercentage) / 10000;
+        uint256 sellerPayment = totalPrice - platformFee;
+        
+        // Get the correct token contract based on the listing
+        IERC20 paymentToken = IERC20(listing.paymentToken);
+        
+        // Transfer tokens from buyer to seller and fee collector
+        paymentToken.safeTransferFrom(msg.sender, listing.seller, sellerPayment);
+        
+        if (platformFee > 0) {
+            paymentToken.safeTransferFrom(msg.sender, feeCollector, platformFee);
+        }
+        
+        // Transfer credits from seller to buyer
+        carbonCredits.safeTransferFrom(listing.seller, msg.sender, listing.tokenId, amount, "");
+        
+        // Update listing
+        listing.amount -= amount;
+        if (listing.amount == 0) {
+            listing.active = false;
+        }
+        
+        emit CreditsPurchased(listingId, msg.sender, amount, totalPrice, listing.paymentToken);
+    }
 }
