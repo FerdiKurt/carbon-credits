@@ -20,4 +20,6 @@ interface Errors {
     error ExceedsAvailableAmount(uint256 available, uint256 requested);
     error FeeTooHigh(uint256 fee);
     error InvalidFeeCollector(address feeCollector);
+    error InvalidCertificationData(string reason);
+    error UnauthorizedAccess(address caller, address expected);
 }
