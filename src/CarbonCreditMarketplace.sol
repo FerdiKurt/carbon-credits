@@ -41,6 +41,7 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
     uint256 public platformFeePercentage; // Fee percentage (in basis points, 100 = 1%)
     address public feeCollector;
     
+    // events
     event ListingCreated(
         uint256 indexed listingId, 
         uint256 indexed tokenId, 
