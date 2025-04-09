@@ -215,6 +215,37 @@ contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
             listing.active
         );
     }
+    
+    //TODO: only multisig-admins can set platform fee
+    /**
+    * @notice Update the platform fee percentage
+    * @dev In production, this should be restricted to the contract owner
+    * @param newFeePercentage The new fee percentage in basis points (100 = 1%)
+    */
+    function setPlatformFee(uint256 newFeePercentage) public {
+        if (newFeePercentage > 1000) {
+            revert FeeTooHigh(newFeePercentage);
+        }
+        
+        platformFeePercentage = newFeePercentage;
+        emit PlatformFeeUpdated(newFeePercentage);
+    }
+    
+    //TODO: only multisig-admins can set fee collector
+    /**
+    * @notice Update the fee collector address
+    * @dev In production, this should be restricted to the contract owner
+    * @param newFeeCollector The new address to collect fees
+    */
+    function setFeeCollector(address newFeeCollector) public {
+        if (newFeeCollector == address(0)) {
+            revert InvalidFeeCollector(newFeeCollector);
+        }
+        
+        feeCollector = newFeeCollector;
+        emit FeeCollectorUpdated(newFeeCollector);
+    }
+    
     /**
     * @notice Check if a token is supported for payment
     * @dev Currently only USDC and USDT are supported
