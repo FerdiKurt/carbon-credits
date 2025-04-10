@@ -123,4 +123,59 @@ contract CarbonCreditRegistry is Errors {
     function getProjectCertifications(uint256 projectId) public view returns (Certification[] memory) {
         return projectCertifications[projectId];
     }
+
+    /**
+     * @notice Authorizes a certifier to issue certifications
+     * @dev Only callable by the contract owner
+     * @param certifierName Name of the certifier to authorize
+     * @param certifierAddress_ Address of the certifier to authorize
+     */
+    function authorizeCertifier(string memory certifierName, address certifierAddress_) public {
+        if (msg.sender != owner) {
+            revert UnauthorizedAccess(msg.sender, owner);
+        }
+        
+        if (bytes(certifierName).length == 0) {
+            revert InvalidCertificationData("Certifier name cannot be empty");
+        }
+        
+        if (certifierAddress_ == address(0)) {
+            revert InvalidCertificationData("Certifier address cannot be zero");
+        }
+        
+        certifierAuthorized[certifierName] = true;
+        certifierAddress[certifierName] = certifierAddress_;
+        
+        emit CertifierAuthorized(certifierName, certifierAddress_);
+    }
+    
+    /**
+     * @notice Revokes authorization from a certifier
+     * @dev Only callable by the contract owner
+     * @param certifierName Name of the certifier to revoke
+     */
+    function revokeCertifier(string memory certifierName) public {
+        if (msg.sender != owner) {
+            revert UnauthorizedAccess(msg.sender, owner);
+        }
+        
+        if (!certifierAuthorized[certifierName]) {
+            revert InvalidCertificationData("Certifier not authorized");
+        }
+        
+        certifierAuthorized[certifierName] = false;
+        certifierAddress[certifierName] = address(0);
+        
+        emit CertifierRevoked(certifierName);
+    }
+    
+    /**
+     * @notice Checks if a certifier is currently authorized
+     * @param certifierName Name of the certifier to check
+     * @return Boolean indicating authorization status
+     */
+    function isCertifierAuthorized(string memory certifierName) public view returns (bool) {
+        return certifierAuthorized[certifierName];
+    }
+    
 }
