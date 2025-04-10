@@ -57,4 +57,70 @@ contract CarbonCreditRegistry is Errors {
         carbonCredits = ICarbonCredits(_carbonCreditsAddress);
         owner = msg.sender;
     }
+
+    /**
+    * @notice Adds a new certification to a carbon credit project
+    * @dev Verifies project existence and certifier authorization before adding
+    * @param projectId ID of the project being certified
+    * @param certifierName Name of the certifying entity
+    * @param certificationStandard Standard used for certification
+    * @param certificateId Unique ID of the certificate
+    * @param issuanceDate Timestamp when the certification was issued
+    * @param expiryDate Timestamp when the certification expires
+    * @param metadataURI URI pointing to additional metadata
+    */
+    function addCertification(
+        uint256 projectId,
+        string memory certifierName,
+        string memory certificationStandard,
+        string memory certificateId,
+        uint256 issuanceDate,
+        uint256 expiryDate,
+        string memory metadataURI
+    ) public {
+        // Check if project exists by verifying its name is not empty
+        (string memory name, , , , , , , , , ) = carbonCredits.getProject(projectId);
+        if (bytes(name).length == 0) {
+            revert ProjectNotFound(projectId);
+        }
+        
+        if (bytes(certifierName).length == 0 || bytes(certificateId).length == 0) {
+            revert InvalidCertificationData("Certifier name and certificate ID are required");
+        }
+        
+        if (issuanceDate >= expiryDate) {
+            revert InvalidCertificationData("Issuance date must be before expiry date");
+        }
+        
+        // If certifier authorization is set up, check it
+        if (certifierAuthorized[certifierName]) {
+            if (certifierAddress[certifierName] != msg.sender) {
+                revert UnauthorizedAccess(msg.sender, certifierAddress[certifierName]);
+            }
+        }
+        
+        Certification memory cert = Certification({
+            projectId: projectId,
+            certifierName: certifierName,
+            certificationStandard: certificationStandard,
+            certificateId: certificateId,
+            issuanceDate: issuanceDate,
+            expiryDate: expiryDate,
+            metadataURI: metadataURI,
+            certifier: msg.sender
+        });
+        
+        projectCertifications[projectId].push(cert);
+        
+        emit CertificationAdded(projectId, certifierName, certificateId);
+    }
+    
+    /**
+    * @notice Retrieves all certifications for a specific project
+    * @param projectId ID of the project to query
+    * @return Array of Certification structs for the project
+    */
+    function getProjectCertifications(uint256 projectId) public view returns (Certification[] memory) {
+        return projectCertifications[projectId];
+    }
 }
