@@ -178,4 +178,20 @@ contract CarbonCreditRegistry is Errors {
         return certifierAuthorized[certifierName];
     }
     
+    /**
+     * @notice Transfers ownership of the registry to a new address
+     * @dev Only callable by the current owner
+     * @param newOwner Address of the new owner
+     */
+    function transferOwnership(address newOwner) public {
+        if (msg.sender != owner) {
+            revert UnauthorizedAccess(msg.sender, owner);
+        }
+        
+        if (newOwner == address(0)) {
+            revert InvalidCertificationData("New owner cannot be zero address");
+        }
+        
+        owner = newOwner;
+    }
 }
