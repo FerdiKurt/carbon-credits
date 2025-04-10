@@ -147,9 +147,6 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     ) public onlyRole(ISSUER_ROLE) returns (uint256) {
         Project storage project = projects[projectId];
         
-        if(project.id == 0) {
-            revert ProjectNotFound(projectId);
-        }
         if(!project.verified) {
             revert ProjectNotVerified(projectId);
         }
