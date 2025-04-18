@@ -146,7 +146,7 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
         uint256 serialNumber
     ) public onlyRole(ISSUER_ROLE) returns (uint256) {
         Project storage project = projects[projectId];
-        
+
         if(!project.verified) {
             revert ProjectNotVerified(projectId);
         }
@@ -312,7 +312,7 @@ contract CarbonCredits is ERC1155, AccessControl, Errors {
     * @param value The uint256 to convert
     * @return The string representation of the uint256
     */
-    function _toString(uint256 value) internal pure returns (string memory) {
+    function _toString(uint256 value) public pure returns (string memory) {
         if (value == 0) {
             return "0";
         }
