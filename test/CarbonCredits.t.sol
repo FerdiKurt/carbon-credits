@@ -2,10 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../src/CarbonCredits.sol";
 
-contract CarbonCreditsTest is Test, AccessControl {
+contract CarbonCreditsTest is Test {
     CarbonCredits carbonCredits;
     
     address admin = address(0x1);
@@ -99,14 +98,7 @@ contract CarbonCreditsTest is Test, AccessControl {
     function testOnlyIssuerCanCreateProject() public {
         vm.startPrank(user);
         
-        vm.expectRevert(
-            // abi.encodeWithSelector(
-            //     AccessControl.AccessControlUnauthorizedAccount.selector,
-            //     user,
-            //     carbonCredits.ISSUER_ROLE()
-            // )
-        );
-        
+        vm.expectRevert();
         carbonCredits.createProject(
             name,
             description,
@@ -163,14 +155,7 @@ contract CarbonCreditsTest is Test, AccessControl {
         // Try to verify with non-verifier
         vm.startPrank(user);
         
-        vm.expectRevert(
-            // abi.encodeWithSelector(
-            //     AccessControl.AccessControlUnauthorizedAccount.selector,
-            //     user,
-            //     carbonCredits.VERIFIER_ROLE()
-            // )
-        );
-        
+        vm.expectRevert();
         carbonCredits.verifyProject(projectId);
         
         vm.stopPrank();
@@ -295,14 +280,7 @@ contract CarbonCreditsTest is Test, AccessControl {
         // Try to issue with non-issuer
         vm.startPrank(user);
         
-        vm.expectRevert(
-            // abi.encodeWithSelector(
-            //     AccessControl.AccessControlUnauthorizedAccount.selector,
-            //     user,
-            //     carbonCredits.ISSUER_ROLE()
-            // )
-        );
-        
+        vm.expectRevert();
         carbonCredits.issueCredits(
             projectId,
             creditAmount,
