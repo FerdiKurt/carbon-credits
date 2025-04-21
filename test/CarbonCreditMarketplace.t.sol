@@ -39,8 +39,8 @@ contract MockERC20 is ERC20 {
     }
 }
 
-contract CarbonCreditMarketplace is Test, Errors {
-    CarbonCreditMarketplaceERC20 marketplace;
+contract CarbonCreditMarketplaceTest is Test, Errors {
+    CarbonCreditMarketplace marketplace;
     MockCarbonCredits carbonCredits;
     MockERC20 usdc;
     MockERC20 usdt;
