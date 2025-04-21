@@ -10,11 +10,11 @@ import "./interfaces/Errors.sol";
 
 
 /**
-* @title CarbonCreditMarketplaceERC20
+* @title CarbonCreditMarketplace
 * @dev Marketplace for trading carbon credits with USDC and USDT payment options
 * @notice This contract allows users to list and purchase carbon credits using stablecoins
 */
-contract CarbonCreditMarketplaceERC20 is ReentrancyGuard, Errors {
+contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
     using SafeERC20 for IERC20;
     
     ICarbonCredits public carbonCredits;
