@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/CarbonCreditMarketplace.sol";
-import "../src/interfaces/ICarbonCredits.sol";
 import "../src/interfaces/Errors.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
