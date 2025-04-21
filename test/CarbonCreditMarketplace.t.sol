@@ -15,7 +15,7 @@ contract MockERC20 is ERC20 {
     }
 }
 
-// Mock ICarbonCredits for testing
+// Mock CarbonCredits for testing
  contract MockCarbonCredits {
     mapping(address => mapping(uint256 => uint256)) private _balances;
     
@@ -31,8 +31,7 @@ contract MockERC20 is ERC20 {
         address from,
         address to,
         uint256 id,
-        uint256 amount,
-        bytes memory data
+        uint256 amount
     ) public {
         require(_balances[from][id] >= amount, "Insufficient balance");
         _balances[from][id] -= amount;
