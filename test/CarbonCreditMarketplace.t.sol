@@ -46,7 +46,7 @@ contract CarbonCreditMarketplace is Test, Errors {
     MockCarbonCredits carbonCredits;
     MockERC20 usdc;
     MockERC20 usdt;
-    MockERC20 otherToken;
+    MockERC20 unsupportedToken;
     
     address admin = address(0x1);
     address feeCollector = address(0x2);
@@ -84,10 +84,10 @@ contract CarbonCreditMarketplace is Test, Errors {
         carbonCredits = new MockCarbonCredits();
         usdc = new MockERC20("USD Coin", "USDC");
         usdt = new MockERC20("Tether", "USDT");
-        otherToken = new MockERC20("Other Token", "OTHER");
+        unsupportedToken = new MockERC20("Other Token", "OTHER");
         
         // Deploy marketplace
-        marketplace = new CarbonCreditMarketplaceERC20(
+        marketplace = new CarbonCreditMarketplace(
             address(carbonCredits),
             address(usdc),
             address(usdt),
