@@ -103,4 +103,174 @@ contract CarbonCreditMarketplace is Test, Errors {
         usdt.mint(buyer, 10000e6); // Mint 10,000 USDT to buyer
         vm.stopPrank();
     }
+
+    function testInitialState() public view {
+        assertEq(address(marketplace.carbonCredits()), address(carbonCredits));
+        assertEq(address(marketplace.usdc()), address(usdc));
+        assertEq(address(marketplace.usdt()), address(usdt));
+        assertEq(marketplace.feeCollector(), feeCollector);
+        assertEq(marketplace.platformFeePercentage(), 250); // 2.5%
+    }
+    
+    function testCreateListing() public {
+        vm.startPrank(seller);
+        
+        vm.expectEmit(true, true, true, true);
+        emit ListingCreated(1, tokenId, seller, amount, pricePerCredit, address(usdc));
+        
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        assertEq(listingId, 1, "Listing ID should be 1");
+        
+        (
+            address lSeller,
+            uint256 lTokenId,
+            uint256 lAmount,
+            uint256 lPricePerCredit,
+            address lPaymentToken,
+            bool lActive
+        ) = marketplace.getListing(listingId);
+        
+        assertEq(lSeller, seller, "Seller mismatch");
+        assertEq(lTokenId, tokenId, "Token ID mismatch");
+        assertEq(lAmount, amount, "Amount mismatch");
+        assertEq(lPricePerCredit, pricePerCredit, "Price per credit mismatch");
+        assertEq(lPaymentToken, address(usdc), "Payment token mismatch");
+        assertTrue(lActive, "Listing should be active");
+        
+        vm.stopPrank();
+    }
+    
+    function testCreateListingWithUsdt() public {
+        vm.startPrank(seller);
+        
+        vm.expectEmit(true, true, true, true);
+        emit ListingCreated(1, tokenId, seller, amount, pricePerCredit, address(usdt));
+        
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdt));
+        
+        assertEq(listingId, 1, "Listing ID should be 1");
+        
+        (
+            address lSeller,
+            uint256 lTokenId,
+            uint256 lAmount,
+            uint256 lPricePerCredit,
+            address lPaymentToken,
+            bool lActive
+        ) = marketplace.getListing(listingId);
+        
+        assertEq(lSeller, seller, "Seller mismatch");
+        assertEq(lTokenId, tokenId, "Token ID mismatch");
+        assertEq(lAmount, amount, "Amount mismatch");
+        assertEq(lPricePerCredit, pricePerCredit, "Price per credit mismatch");
+        assertEq(lPaymentToken, address(usdt), "Payment token mismatch");
+        assertTrue(lActive, "Listing should be active");
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotCreateListingWithInsufficientBalance() public {
+        vm.startPrank(seller);
+        
+        uint256 excessAmount = 101; // Seller only has 100 credits
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.InsufficientCredits.selector,
+                tokenId,
+                seller,
+                excessAmount,
+                100
+            )
+        );
+        
+        marketplace.createListing(tokenId, excessAmount, pricePerCredit, address(usdc));
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotCreateListingWithUnsupportedToken() public {
+        vm.startPrank(seller);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.UnsupportedPaymentToken.selector,
+                address(unsupportedToken)
+            )
+        );
+        
+        marketplace.createListing(tokenId, amount, pricePerCredit, address(unsupportedToken));
+        
+        vm.stopPrank();
+    }
+    
+    function testCancelListing() public {
+        // First create a listing
+        vm.startPrank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        vm.expectEmit(true, false, false, false);
+        emit ListingCancelled(listingId);
+        
+        marketplace.cancelListing(listingId);
+        
+        (,,,,, bool lActive) = marketplace.getListing(listingId);
+        assertFalse(lActive, "Listing should not be active");
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotCancelNonExistentListing() public {
+        vm.startPrank(seller);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.ListingNotActive.selector,
+                999
+            )
+        );
+        
+        marketplace.cancelListing(999);
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotCancelInactiveListing() public {
+        // First create and cancel a listing
+        vm.startPrank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        marketplace.cancelListing(listingId);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.ListingNotActive.selector,
+                listingId
+            )
+        );
+        
+        marketplace.cancelListing(listingId);
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotCancelOtherSellerListing() public {
+        // First create a listing
+        vm.prank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        vm.startPrank(buyer);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.NotSeller.selector,
+                buyer,
+                seller
+            )
+        );
+        
+        marketplace.cancelListing(listingId);
+        
+        vm.stopPrank();
+    }
 }
