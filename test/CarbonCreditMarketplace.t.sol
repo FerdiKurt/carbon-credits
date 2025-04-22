@@ -444,4 +444,66 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
+    function testSetPlatformFee() public {
+        vm.startPrank(admin);
+        
+        uint256 newFee = 300; // 3%
+        
+        vm.expectEmit(true, false, false, false);
+        emit PlatformFeeUpdated(newFee);
+        
+        marketplace.setPlatformFee(newFee);
+        
+        assertEq(marketplace.platformFeePercentage(), newFee, "Fee should be updated");
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotSetExcessiveFee() public {
+        vm.startPrank(admin);
+        
+        uint256 excessiveFee = 1001; // Over 10%
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.FeeTooHigh.selector,
+                excessiveFee
+            )
+        );
+        
+        marketplace.setPlatformFee(excessiveFee);
+        
+        vm.stopPrank();
+    }
+    
+    function testSetFeeCollector() public {
+        vm.startPrank(admin);
+        
+        address newCollector = address(0x5);
+        
+        vm.expectEmit(true, false, false, false);
+        emit FeeCollectorUpdated(newCollector);
+        
+        marketplace.setFeeCollector(newCollector);
+        
+        assertEq(marketplace.feeCollector(), newCollector, "Fee collector should be updated");
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotSetZeroAddressFeeCollector() public {
+        vm.startPrank(admin);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.InvalidFeeCollector.selector,
+                address(0)
+            )
+        );
+        
+        marketplace.setFeeCollector(address(0));
+        
+        vm.stopPrank();
+    }
+    
 }
