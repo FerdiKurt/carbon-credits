@@ -23,4 +23,5 @@ interface Errors {
     error InvalidCertificationData(string reason);
     error UnauthorizedAccess(address caller, address expected);
     error RevokedCertifier(address certifier, string certifierName);
+    error NotAuthorized(address sender, string role);
 }
