@@ -134,7 +134,7 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         carbonCredits = new MockCarbonCredits();
         usdc = new MockERC20("USD Coin", "USDC");
         usdt = new MockERC20("Tether", "USDT");
-        unsupportedToken = new MockERC20("Other Token", "OTHER");
+        unsupportedToken = new MockERC20("Unsupported Token", "UNSUPPORTED");
         
         // Deploy marketplace
         marketplace = new CarbonCreditMarketplace(
