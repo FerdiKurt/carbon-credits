@@ -153,7 +153,7 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         usdt.mint(buyer, 10000e6); // Mint 10,000 USDT to buyer
         vm.stopPrank();
     }
-
+    
     function testInitialState() public view {
         assertEq(address(marketplace.carbonCredits()), address(carbonCredits));
         assertEq(address(marketplace.usdc()), address(usdc));
@@ -323,4 +323,125 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         
         vm.stopPrank();
     }
+    
+    function testPurchaseCredits() public {
+        // First create a listing
+        vm.startPrank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        // The seller needs to approve the marketplace to transfer their carbon credits
+        // Let's add an "approveForAll" function to our mock
+        MockCarbonCredits(address(carbonCredits)).setApprovalForAll(address(marketplace), true);
+        vm.stopPrank();
+        
+        // Approve marketplace to spend buyer's USDC
+        vm.startPrank(buyer);
+        usdc.approve(address(marketplace), amount * pricePerCredit);
+        
+        uint256 totalPrice = amount * pricePerCredit;
+        uint256 platformFee = (totalPrice * marketplace.platformFeePercentage()) / 10000;
+        uint256 sellerPayment = totalPrice - platformFee;
+        
+        // Capture initial balances for verification
+        uint256 initialBuyerUsdcBalance = usdc.balanceOf(buyer);
+        uint256 initialSellerUsdcBalance = usdc.balanceOf(seller);
+        uint256 initialFeeCollectorBalance = usdc.balanceOf(feeCollector);
+        uint256 initialBuyerCreditBalance = carbonCredits.balanceOf(buyer, tokenId);
+        uint256 initialSellerCreditBalance = carbonCredits.balanceOf(seller, tokenId);
+        
+        // Test event emission
+        vm.expectEmit();
+        emit CreditsPurchased(listingId, buyer, amount, totalPrice, address(usdc));
+        
+        marketplace.purchaseCredits(listingId, amount);
+        
+        // Check state changes
+        (,,,,, bool lActive) = marketplace.getListing(listingId);
+        assertFalse(lActive, "Listing should not be active after full purchase");
+        
+        // Check token transfers
+        assertEq(carbonCredits.balanceOf(buyer, tokenId), initialBuyerCreditBalance + amount, "Buyer should have received credits");
+        assertEq(carbonCredits.balanceOf(seller, tokenId), initialSellerCreditBalance - amount, "Seller should have sent credits");
+        assertEq(usdc.balanceOf(buyer), initialBuyerUsdcBalance - totalPrice, "Buyer should have spent USDC");
+        assertEq(usdc.balanceOf(seller), initialSellerUsdcBalance + sellerPayment, "Seller should have received payment");
+        assertEq(usdc.balanceOf(feeCollector), initialFeeCollectorBalance + platformFee, "Fee collector should have received fee");
+        
+        vm.stopPrank();
+    }
+    
+    function testPartialPurchase() public {
+        // Create a listing with more credits
+        vm.startPrank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount * 2, pricePerCredit, address(usdc));
+        
+        // The seller needs to approve the marketplace
+        MockCarbonCredits(address(carbonCredits)).setApprovalForAll(address(marketplace), true);
+        vm.stopPrank();
+        
+        // Approve marketplace to spend buyer's USDC
+        vm.startPrank(buyer);
+        usdc.approve(address(marketplace), amount * pricePerCredit);
+        
+        uint256 totalPrice = amount * pricePerCredit;
+        uint256 platformFee = (totalPrice * marketplace.platformFeePercentage()) / 10000;
+        uint256 sellerPayment = totalPrice - platformFee;
+        
+        marketplace.purchaseCredits(listingId, amount);
+        
+        // Check state changes
+        (,, uint256 remainingAmount,,, bool lActive) = marketplace.getListing(listingId);
+        assertTrue(lActive, "Listing should still be active after partial purchase");
+        assertEq(remainingAmount, amount, "Listing should have half the amount left");
+        
+        // Check token transfers
+        assertEq(carbonCredits.balanceOf(buyer, tokenId), amount, "Buyer should have received credits");
+        assertEq(usdc.balanceOf(seller), sellerPayment, "Seller should have received payment");
+        assertEq(usdc.balanceOf(feeCollector), platformFee, "Fee collector should have received fee");
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotPurchaseInactiveListing() public {
+        // Create and cancel a listing
+        vm.startPrank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        marketplace.cancelListing(listingId);
+        vm.stopPrank();
+        
+        // Try to purchase
+        vm.startPrank(buyer);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.ListingNotActive.selector,
+                listingId
+            )
+        );
+        
+        marketplace.purchaseCredits(listingId, amount);
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotPurchaseMoreThanAvailable() public {
+        // Create a listing
+        vm.prank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        // Try to purchase more than available
+        vm.startPrank(buyer);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.ExceedsAvailableAmount.selector,
+                amount,
+                amount + 1
+            )
+        );
+        
+        marketplace.purchaseCredits(listingId, amount + 1);
+        
+        vm.stopPrank();
+    }
+    
 }
