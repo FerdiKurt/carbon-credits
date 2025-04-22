@@ -8,18 +8,53 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // Mock ERC20 token for testing
 contract MockERC20 is ERC20 {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        _mint(msg.sender, 1000000 * 10**18); // Mint some initial supply to creator
+    }
     
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
+    
+    // Override to ensure SafeERC20 works properly
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        _transfer(msg.sender, to, amount);
+        return true; // Explicitly return true
+    }
+    
+    // Override to ensure SafeERC20 works properly
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        address spender = msg.sender;
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
+        return true; // Explicitly return true
+    }
+    
+    // Override to ensure SafeERC20 works properly
+    function approve(address spender, uint256 amount) public override returns (bool) {
+        _approve(msg.sender, spender, amount);
+        return true; // Explicitly return true
+    }
 }
 
-// Mock CarbonCredits for testing
- contract MockCarbonCredits {
+// CarbonCredits interface
+interface ICarbonCredit {
+    function balanceOf(address account, uint256 id) external view returns (uint256);
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) external;
+}
+
+// Mock Contract for testing
+contract MockCarbonCredits is ICarbonCredit {
     mapping(address => mapping(uint256 => uint256)) private _balances;
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
     
-    function balanceOf(address account, uint256 id) public view returns (uint256) {
+    function balanceOf(address account, uint256 id) public view override returns (uint256) {
         return _balances[account][id];
     }
     
@@ -27,13 +62,30 @@ contract MockERC20 is ERC20 {
         _balances[to][id] += amount;
     }
     
+    // Needed for ERC1155 approvals
+    function setApprovalForAll(address operator, bool approved) public {
+        _operatorApprovals[msg.sender][operator] = approved;
+    }
+    
+    function isApprovedForAll(address account, address operator) public view returns (bool) {
+        return _operatorApprovals[account][operator];
+    }
+    
     function safeTransferFrom(
         address from,
         address to,
         uint256 id,
-        uint256 amount
-    ) public {
-        require(_balances[from][id] >= amount, "Insufficient balance");
+        uint256 amount,
+        bytes memory /* data */
+    ) public override {
+        require(_balances[from][id] >= amount, "MockCarbonCredits: insufficient balance");
+        
+        // Check if msg.sender is approved to transfer tokens from 'from'
+        require(
+            from == msg.sender || isApprovedForAll(from, msg.sender),
+            "MockCarbonCredits: caller is not owner nor approved"
+        );
+        
         _balances[from][id] -= amount;
         _balances[to][id] += amount;
     }
