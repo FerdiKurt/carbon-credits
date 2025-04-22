@@ -22,4 +22,5 @@ interface Errors {
     error InvalidFeeCollector(address feeCollector);
     error InvalidCertificationData(string reason);
     error UnauthorizedAccess(address caller, address expected);
+    error RevokedCertifier(address certifier, string certifierName);
 }
