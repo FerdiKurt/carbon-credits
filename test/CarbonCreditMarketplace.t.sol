@@ -506,4 +506,9 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
+    function testCheckTokenSupported() public view {
+        assertTrue(marketplace.isTokenSupported(address(usdc)), "USDC should be supported");
+        assertTrue(marketplace.isTokenSupported(address(usdt)), "USDT should be supported");
+        assertFalse(marketplace.isTokenSupported(address(unsupportedToken)), "Other token should not be supported");
+    }
 }
