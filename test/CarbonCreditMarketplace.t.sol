@@ -98,10 +98,15 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
     MockERC20 usdt;
     MockERC20 unsupportedToken;
     
+    // Role constants
+    bytes32 constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 constant VERIFIED_SELLER_ROLE = keccak256("VERIFIED_SELLER_ROLE");
+    
     address admin = address(0x1);
     address feeCollector = address(0x2);
     address seller = address(0x3);
     address buyer = address(0x4);
+    address nonAuthorizedUser = address(0x5);
     
     uint256 tokenId = 123;
     uint256 amount = 10;
@@ -116,7 +121,7 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         uint256 pricePerCredit, 
         address paymentToken
     );
-    event ListingCancelled(uint256 indexed listingId);
+    event ListingCancelled(uint256 indexed listingId, address canceller);
     event CreditsPurchased(
         uint256 indexed listingId, 
         address indexed buyer, 
@@ -126,6 +131,8 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
     );
     event PlatformFeeUpdated(uint256 newFeePercentage);
     event FeeCollectorUpdated(address newFeeCollector);
+    event SellerVerified(address seller);
+    event SellerVerificationRevoked(address seller);
     
     function setUp() public {
         vm.startPrank(admin);
@@ -144,6 +151,9 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
             feeCollector
         );
         
+        // Add verified seller
+        marketplace.addVerifiedSeller(seller);
+        
         vm.stopPrank();
         
         // Setup test data
@@ -160,6 +170,8 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         assertEq(address(marketplace.usdt()), address(usdt));
         assertEq(marketplace.feeCollector(), feeCollector);
         assertEq(marketplace.platformFeePercentage(), 250); // 2.5%
+        assertTrue(marketplace.hasRole(ADMIN_ROLE, admin), "Admin should have ADMIN_ROLE");
+        assertTrue(marketplace.hasRole(VERIFIED_SELLER_ROLE, seller), "Seller should have VERIFIED_SELLER_ROLE");
     }
     
     function testCreateListing() public {
@@ -220,6 +232,22 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
+    function testCannotCreateListingIfNotVerifiedSeller() public {
+        vm.startPrank(nonAuthorizedUser);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.NotAuthorized.selector,
+                nonAuthorizedUser,
+                "VERIFIED_SELLER_ROLE"
+            )
+        );
+        
+        marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        vm.stopPrank();
+    }
+    
     function testCannotCreateListingWithInsufficientBalance() public {
         vm.startPrank(seller);
         
@@ -255,13 +283,16 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
-    function testCancelListing() public {
+    function testAdminCanCancelListing() public {
         // First create a listing
-        vm.startPrank(seller);
+        vm.prank(seller);
         uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
         
-        vm.expectEmit(true, false, false, false);
-        emit ListingCancelled(listingId);
+        // Cancel as admin
+        vm.startPrank(admin);
+        
+        vm.expectEmit(true, true, false, false);
+        emit ListingCancelled(listingId, admin);
         
         marketplace.cancelListing(listingId);
         
@@ -271,8 +302,29 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
-    function testCannotCancelNonExistentListing() public {
+    function testSellerCannotCancelListing() public {
+        // First create a listing
+        vm.prank(seller);
+        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        // Try to cancel as seller
         vm.startPrank(seller);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.NotAuthorized.selector,
+                seller,
+                "ADMIN_ROLE"
+            )
+        );
+        
+        marketplace.cancelListing(listingId);
+        
+        vm.stopPrank();
+    }
+    
+    function testCannotCancelNonExistentListing() public {
+        vm.startPrank(admin);
         
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -288,8 +340,10 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
     
     function testCannotCancelInactiveListing() public {
         // First create and cancel a listing
-        vm.startPrank(seller);
+        vm.prank(seller);
         uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        vm.startPrank(admin);
         marketplace.cancelListing(listingId);
         
         vm.expectRevert(
@@ -304,33 +358,12 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
-    function testCannotCancelOtherSellerListing() public {
-        // First create a listing
-        vm.prank(seller);
-        uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
-        
-        vm.startPrank(buyer);
-        
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Errors.NotSeller.selector,
-                buyer,
-                seller
-            )
-        );
-        
-        marketplace.cancelListing(listingId);
-        
-        vm.stopPrank();
-    }
-    
     function testPurchaseCredits() public {
         // First create a listing
         vm.startPrank(seller);
         uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
         
         // The seller needs to approve the marketplace to transfer their carbon credits
-        // Let's add an "approveForAll" function to our mock
         MockCarbonCredits(address(carbonCredits)).setApprovalForAll(address(marketplace), true);
         vm.stopPrank();
         
@@ -403,10 +436,11 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
     
     function testCannotPurchaseInactiveListing() public {
         // Create and cancel a listing
-        vm.startPrank(seller);
+        vm.prank(seller);
         uint256 listingId = marketplace.createListing(tokenId, amount, pricePerCredit, address(usdc));
+        
+        vm.prank(admin);
         marketplace.cancelListing(listingId);
-        vm.stopPrank();
         
         // Try to purchase
         vm.startPrank(buyer);
@@ -444,7 +478,7 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
-    function testSetPlatformFee() public {
+    function testOnlyAdminCanSetPlatformFee() public {
         vm.startPrank(admin);
         
         uint256 newFee = 300; // 3%
@@ -455,6 +489,24 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         marketplace.setPlatformFee(newFee);
         
         assertEq(marketplace.platformFeePercentage(), newFee, "Fee should be updated");
+        
+        vm.stopPrank();
+    }
+    
+    function testNonAdminCannotSetPlatformFee() public {
+        vm.startPrank(nonAuthorizedUser);
+        
+        uint256 newFee = 300; // 3%
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.NotAuthorized.selector,
+                nonAuthorizedUser,
+                "ADMIN_ROLE"
+            )
+        );
+        
+        marketplace.setPlatformFee(newFee);
         
         vm.stopPrank();
     }
@@ -476,7 +528,7 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         vm.stopPrank();
     }
     
-    function testSetFeeCollector() public {
+    function testOnlyAdminCanSetFeeCollector() public {
         vm.startPrank(admin);
         
         address newCollector = address(0x5);
@@ -487,6 +539,24 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         marketplace.setFeeCollector(newCollector);
         
         assertEq(marketplace.feeCollector(), newCollector, "Fee collector should be updated");
+        
+        vm.stopPrank();
+    }
+    
+    function testNonAdminCannotSetFeeCollector() public {
+        vm.startPrank(nonAuthorizedUser);
+        
+        address newCollector = address(0x5);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.NotAuthorized.selector,
+                nonAuthorizedUser,
+                "ADMIN_ROLE"
+            )
+        );
+        
+        marketplace.setFeeCollector(newCollector);
         
         vm.stopPrank();
     }
@@ -510,5 +580,47 @@ contract CarbonCreditMarketplaceTest is Test, Errors {
         assertTrue(marketplace.isTokenSupported(address(usdc)), "USDC should be supported");
         assertTrue(marketplace.isTokenSupported(address(usdt)), "USDT should be supported");
         assertFalse(marketplace.isTokenSupported(address(unsupportedToken)), "Other token should not be supported");
+    }
+    
+    function testVerifyAndRevokeSellerPermissions() public {
+        address newSeller = address(0x6);
+        
+        // Initially, not a verified seller
+        assertFalse(marketplace.isVerifiedSeller(newSeller), "Should not be a verified seller initially");
+        
+        // Only admin can add a verified seller
+        vm.startPrank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit SellerVerified(newSeller);
+        marketplace.addVerifiedSeller(newSeller);
+        vm.stopPrank();
+        
+        // Check the seller is now verified
+        assertTrue(marketplace.isVerifiedSeller(newSeller), "Should be a verified seller after adding");
+        
+        // Now revoke permission
+        vm.prank(admin);
+        marketplace.removeVerifiedSeller(newSeller);
+        
+        // Check the seller is no longer verified
+        assertFalse(marketplace.isVerifiedSeller(newSeller), "Should not be a verified seller after removal");
+    }
+    
+    function testNonAdminCannotVerifySeller() public {
+        address newSeller = address(0x6);
+        
+        vm.startPrank(nonAuthorizedUser);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Errors.NotAuthorized.selector,
+                nonAuthorizedUser,
+                "ADMIN_ROLE"
+            )
+        );
+        
+        marketplace.addVerifiedSeller(newSeller);
+        
+        vm.stopPrank();
     }
 }
