@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/ICarbonCredits.sol";
 import "./interfaces/Errors.sol";
 
@@ -12,10 +13,14 @@ import "./interfaces/Errors.sol";
 /**
 * @title CarbonCreditMarketplace
 * @dev Marketplace for trading carbon credits with USDC and USDT payment options
-* @notice This contract allows users to list and purchase carbon credits using stablecoins
+* @notice This contract allows verified sellers to list and users to purchase carbon credits using stablecoins
 */
-contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
+contract CarbonCreditMarketplace is ReentrancyGuard, AccessControl, Errors {
     using SafeERC20 for IERC20;
+    
+    // Role definitions
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant VERIFIED_SELLER_ROLE = keccak256("VERIFIED_SELLER_ROLE");
     
     ICarbonCredits public carbonCredits;
     IERC20 public usdc;
@@ -50,7 +55,7 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
         uint256 pricePerCredit, 
         address paymentToken
     );
-    event ListingCancelled(uint256 indexed listingId);
+    event ListingCancelled(uint256 indexed listingId, address canceller);
     event CreditsPurchased(
         uint256 indexed listingId, 
         address indexed buyer, 
@@ -60,10 +65,22 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
     );
     event PlatformFeeUpdated(uint256 newFeePercentage);
     event FeeCollectorUpdated(address newFeeCollector);
+    event SellerVerified(address seller);
+    event SellerVerificationRevoked(address seller);
+    
+    /**
+    * @dev Modifier to restrict function access to admins only
+    */
+    modifier onlyAdmin() {
+        if (!hasRole(ADMIN_ROLE, msg.sender)) {
+            revert NotAuthorized(msg.sender, "ADMIN_ROLE");
+        }
+        _;
+    }
     
     /**
     * @notice Constructor to initialize the marketplace
-    * @dev Sets up the marketplace with carbon credits contract and supported stablecoins
+    * @dev Sets up the marketplace with carbon credits contract, supported stablecoins, and grants admin role to deployer
     * @param _carbonCreditsAddress Address of the Carbon Credits ERC1155 contract
     * @param _usdcAddress Address of the USDC stablecoin contract
     * @param _usdtAddress Address of the USDT stablecoin contract
@@ -81,12 +98,35 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
         feeCollector = _feeCollector;
         platformFeePercentage = 250; // 2.5% fee by default
         _listingIdCounter = 1;
+        
+        // Setup roles - grant admin role to contract deployer
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
     }
 
-    //TODO: only verified sellers and approved tokens
+    /**
+    * @notice Add a verified seller
+    * @dev Only callable by admins
+    * @param seller Address to be granted the verified seller role
+    */
+    function addVerifiedSeller(address seller) external onlyAdmin {
+        grantRole(VERIFIED_SELLER_ROLE, seller);
+        emit SellerVerified(seller);
+    }
+    
+    /**
+    * @notice Remove a verified seller
+    * @dev Only callable by admins
+    * @param seller Address to have verified seller role revoked
+    */
+    function removeVerifiedSeller(address seller) external onlyAdmin {
+        revokeRole(VERIFIED_SELLER_ROLE, seller);
+        emit SellerVerificationRevoked(seller);
+    }
+
     /**
     * @notice Create a listing to sell carbon credits with stablecoin as payment
-    * @dev Seller must have sufficient balance of carbon credits
+    * @dev Only verified sellers can create listings and must have sufficient balance of carbon credits
     * @param tokenId The ID of the carbon credit token
     * @param amount The amount of credits to sell
     * @param pricePerCredit The price per credit in the smallest unit of the payment token
@@ -99,6 +139,11 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
         uint256 pricePerCredit,
         address paymentToken
     ) public returns (uint256) {
+        // Check if sender is a verified seller
+        if (!hasRole(VERIFIED_SELLER_ROLE, msg.sender)) {
+            revert NotAuthorized(msg.sender, "VERIFIED_SELLER_ROLE");
+        }
+        
         uint256 balance = carbonCredits.balanceOf(msg.sender, tokenId);
         if (balance < amount) {
             revert InsufficientCredits(tokenId, msg.sender, amount, balance);
@@ -123,26 +168,21 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
         return listingId;
     }
     
-    //TODO: only multisig-admins or Seller can cancel listing
     /**
     * @notice Cancel an active listing
-    * @dev Only the seller of the listing can cancel it
+    * @dev Only admins can cancel listings
     * @param listingId The ID of the listing to cancel
     */
-    function cancelListing(uint256 listingId) public {
+    function cancelListing(uint256 listingId) public onlyAdmin {
         Listing storage listing = listings[listingId];
         
         if (!listing.active) {
             revert ListingNotActive(listingId);
         }
         
-        if (listing.seller != msg.sender) {
-            revert NotSeller(msg.sender, listing.seller);
-        }
-        
         listing.active = false;
         
-        emit ListingCancelled(listingId);
+        emit ListingCancelled(listingId, msg.sender);
     }
 
     /**
@@ -217,13 +257,12 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
         );
     }
     
-    //TODO: only multisig-admins can set platform fee
     /**
     * @notice Update the platform fee percentage
-    * @dev In production, this should be restricted to the contract owner
+    * @dev Only admins can update the platform fee
     * @param newFeePercentage The new fee percentage in basis points (100 = 1%)
     */
-    function setPlatformFee(uint256 newFeePercentage) public {
+    function setPlatformFee(uint256 newFeePercentage) public onlyAdmin {
         if (newFeePercentage > 1000) {
             revert FeeTooHigh(newFeePercentage);
         }
@@ -232,13 +271,12 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
         emit PlatformFeeUpdated(newFeePercentage);
     }
     
-    //TODO: only multisig-admins can set fee collector
     /**
     * @notice Update the fee collector address
-    * @dev In production, this should be restricted to the contract owner
+    * @dev Only admins can update the fee collector
     * @param newFeeCollector The new address to collect fees
     */
-    function setFeeCollector(address newFeeCollector) public {
+    function setFeeCollector(address newFeeCollector) public onlyAdmin {
         if (newFeeCollector == address(0)) {
             revert InvalidFeeCollector(newFeeCollector);
         }
@@ -255,5 +293,14 @@ contract CarbonCreditMarketplace is ReentrancyGuard, Errors {
     */
     function isTokenSupported(address tokenAddress) public view returns (bool) {
         return tokenAddress == address(usdc) || tokenAddress == address(usdt);
+    }
+    
+    /**
+    * @notice Check if an address is a verified seller
+    * @param seller The address to check
+    * @return True if the address has the verified seller role
+    */
+    function isVerifiedSeller(address seller) public view returns (bool) {
+        return hasRole(VERIFIED_SELLER_ROLE, seller);
     }
 }
