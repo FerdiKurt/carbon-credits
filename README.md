@@ -1,70 +1,204 @@
-# carbon-credits
-These smart contracts provide a comprehensive system for carbon credit tokenization, issuance, trading, and retirement. Here's an explanation of each component:
+# Carbon Credits Blockchain Platform
 
-## CarbonCredits Contract
+A blockchain-based system for tokenizing, issuing, trading, and retiring carbon credits with proper verification, certification, and marketplace functionality.
 
->Manages the core functionality using `ERC-1155` multi-token standard
+## Overview
 
->Implements role-based access control for issuers and verifiers
+This platform provides a robust framework for managing the lifecycle of carbon credits on the blockchain. By leveraging Ethereum's ERC-1155 token standard, the system enables transparent tracking of carbon credit projects and their associated credits while ensuring proper certification and verification.
 
->Allows project creation, verification, and credit issuance
+## Key Components
 
->Supports carbon credit retirement with proper tracking
+The platform consists of three main smart contracts:
 
->Maintains detailed metadata for projects and credit batches
+### 1. CarbonCredits Contract
 
-#### Vintage
+This core contract handles the tokenization of carbon credits using the ERC-1155 standard.
 
-- The vintage represents the year in which the carbon reduction or sequestration actually occurred
-*For example, if a forest conservation project prevented carbon emissions in 2025, the carbon credits would have a 2025 vintage*
+**Key Features:**
+- **Project Management**: Create, verify, and track carbon offset projects
+- **Credit Issuance**: Issue carbon credits for verified projects
+- **Credit Retirement**: Permanently retire credits to claim their environmental benefit
+- **Role-Based Access Control**: Separate issuer and verifier roles for proper checks and balances
 
-- This is important because carbon credits from different years may have different values in the market (newer vintages often trade at premium prices)
+### 2. CarbonCreditMarketplace Contract
 
-- Buyers sometimes specifically seek credits from certain years based on their offsetting goals or reporting requirements
+This contract enables trading of carbon credits using stablecoins (USDC and USDT).
 
-- In the contract, it's stored as a uint256 value representing the year (e.g., 2025)
+**Key Features:**
+- **Listings**: Verified sellers can list carbon credits for sale
+- **Purchases**: Buyers can purchase credits using stablecoins
+- **Fee Management**: Configurable platform fees for sustainability
+- **Seller Verification**: Ensures only authorized entities can sell credits
 
-#### Serial Number
+### 3. CarbonCreditRegistry Contract
 
-- The serialNumber provides a unique identifier for each batch of credits within a project
-- It helps prevent double-counting and enables full traceability of credits
-- This is similar to how traditional carbon registries assign unique serial numbers to each credit issuance
-- The serial number might follow a specific format defined by carbon standards (like Verra or Gold Standard)
-- In the contract, it's stored as a uint256 but could represent a numeric portion of a more complex identification system
+This contract manages certification information for carbon credit projects.
 
-**Together, these variables ensure that each carbon credit batch has a clear provenance and can be tracked throughout its lifecycle from issuance to retirement. This traceability is crucial for maintaining the integrity of the carbon market and preventing issues like double-counting of emissions reductions.**
+**Key Features:**
+- **Certification Management**: Track certifications from recognized standards bodies
+- **Certifier Authorization**: Only authorized entities can issue certifications
+- **Certification Verification**: Verify the authenticity of project certifications
+- **Revocation Tracking**: Track revoked certifiers for enhanced security
 
-## CarbonCreditMarketplace Contract
+## Technical Architecture
 
->Provides a marketplace for trading carbon credits
+```
+┌────────────────────┐      ┌─────────────────────────┐      ┌───────────────────┐
+│                    │      │                         │      │                   │
+│   CarbonCredits    │◄────►│  CarbonCreditRegistry   │      │ CarbonCredit      │
+│   (ERC-1155)       │      │                         │      │ Marketplace       │
+│                    │      │                         │      │                   │
+└────────────────────┘      └─────────────────────────┘      └───────────────────┘
+         ▲                                                            ▲
+         │                                                            │
+         │                                                            │
+         │                                                            │
+         ▼                                                            ▼
+┌────────────────────┐                                     ┌────────────────────┐
+│                    │                                     │                    │
+│  Project Issuers   │                                     │  Stablecoins       │
+│  and Verifiers     │                                     │  (USDC/USDT)       │
+│                    │                                     │                    │
+└────────────────────┘                                     └────────────────────┘
+```
 
->Allows sellers to list credits for sale at specified prices
+## Roles and Permissions
 
->Enables buyers to purchase credits directly
+The system implements role-based access control:
 
->Handles payment transfers and credit ownership updates
+1. **Issuer Role**: Can create projects and issue carbon credits
+2. **Verifier Role**: Can verify projects to enable credit issuance
+3. **Admin Role**: Can manage marketplace settings and verified sellers
+4. **Verified Seller Role**: Can list carbon credits for sale on the marketplace
+5. **Registry Owner**: Can authorize and revoke certifiers
+6. **Certifiers**: Can issue certifications for carbon credit projects
 
+## Contract Interactions
 
-## CarbonCreditRegistry Contract
+- **Project Creation**: Issuers create carbon credit projects with metadata
+- **Project Verification**: Verifiers approve legitimate projects
+- **Credit Issuance**: Issuers mint carbon credit tokens for verified projects
+- **Certification**: Authorized certifiers add standards certifications
+- **Marketplace Listing**: Verified sellers list credits for sale
+- **Credit Purchase**: Users buy credits with stablecoins
+- **Credit Retirement**: Credit owners permanently retire credits for offset claims
 
->Records certifications and validations for carbon projects
+## Workflow Example
 
->Links to third-party certification standards
+1. An issuer creates a new carbon project (e.g., reforestation project)
+2. A verifier checks and verifies the project
+3. The issuer mints carbon credit tokens for the verified project
+4. A certifier adds certification information from a standards body
+5. The project owner lists credits for sale on the marketplace
+6. A buyer purchases credits using USDC or USDT
+7. The buyer can retire credits to claim the environmental benefit
 
->Maintains an auditable history of project credentials
+## Security Features
 
+- **Role-Based Authorization**: Ensures proper separation of duties
+- **Reentrancy Protection**: Prevents reentrancy attacks on marketplace transactions
+- **Certification Verification**: Validates the authenticity of certifiers
+- **Certifier Revocation Tracking**: Tracks revoked certifiers for enhanced security
+- **Fee Limits**: Caps platform fees to prevent excessive charges
 
+## Technical Details
 
-### Key features of this system:
+### Technology Stack
 
-**Traceability:** Each credit batch is linked to a specific project with vintage year and serial numbers<br>
-**Transparent retirement:** Credits can be permanently retired with full transaction history<br>
-**Verification workflow:** Projects must be verified before credits can be issued<br>
-**Flexible metadata:** Rich metadata support for project details and certifications<br>
-**Role-based security:** Different permissions for project owners, verifiers, and issuers<br>
+- **Smart Contract Language**: Solidity ^0.8.20
+- **Token Standard**: ERC-1155 (Multi-token standard)
+- **Access Control**: OpenZeppelin Access Control
+- **Dependencies**:
+  - OpenZeppelin Contracts for security best practices
+  - Custom interfaces for cross-contract communication
+  - SafeERC20 for secure token transfers
 
-### To deploy this system
+### Key Data Structures
 
-1. Deploy the CarbonCredits contract first
-2. Use the CarbonCredits contract address to deploy the Marketplace and Registry
-3. Grant appropriate roles to authorized participants
+- **Project**: Stores metadata about carbon projects
+- **CreditBatch**: Represents a batch of carbon credits with specific attributes
+- **Listing**: Marketplace listing with pricing and payment details
+- **Certification**: Records certification data for projects
+
+## Future Enhancements
+
+- Integration with real-world carbon credit verification oracles
+- Support for additional payment tokens
+- Enhanced reporting and analytics
+- Carbon credit bundling and derivatives
+- Integration with decentralized exchanges for increased liquidity
+- Governance mechanisms for decentralized platform management
+
+## Getting Started
+
+### Installation
+
+Clone the repository and install Foundry:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/carbon-credits-platform.git
+cd carbon-credits-platform
+
+# Install Foundry
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+Create a `.env` file for environment variables:
+
+```
+PRIVATE_KEY=your_private_key_here
+RPC_URL_MAINNET=your_mainnet_rpc_url
+RPC_URL_SEPOLIA=your_sepolia_rpc_url
+ETHERSCAN_API_KEY=your_etherscan_api_key
+```
+
+### Compilation
+
+Compile the smart contracts:
+
+```bash
+forge build
+```
+
+### Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+forge test
+
+# Run specific test file
+forge test --match-path test/CarbonCredits.t.sol
+
+# Run with verbose output
+forge test -vvv
+
+# Run with gas reporting
+forge test --gas-report
+
+# Run test coverage
+forge coverage
+```
+
+### Deployment
+
+Deploy contracts to various networks:
+
+```bash
+# Deploy to local Anvil node
+forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
+
+# Deploy to testnet (Sepolia)
+forge script script/Deploy.s.sol --rpc-url $RPC_URL_SEPOLIA --private-key $PRIVATE_KEY --broadcast --verify
+
+# Deploy to mainnet
+forge script script/Deploy.s.sol --rpc-url $RPC_URL_MAINNET --private-key $PRIVATE_KEY --broadcast --verify
+```
+
+## Acknowledgments
+
+- Built with OpenZeppelin libraries for security best practices
+- Inspired by existing carbon credit registry standards like Verra and Gold Standard
