@@ -96,7 +96,6 @@ The system implements role-based access control:
 ## Security Features
 
 - **Role-Based Authorization**: Ensures proper separation of duties
-- **Reentrancy Protection**: Prevents reentrancy attacks on marketplace transactions
 - **Certification Verification**: Validates the authenticity of certifiers
 - **Certifier Revocation Tracking**: Tracks revoked certifiers for enhanced security
 - **Fee Limits**: Caps platform fees to prevent excessive charges
@@ -109,7 +108,7 @@ The system implements role-based access control:
 - **Token Standard**: ERC-1155 (Multi-token standard)
 - **Access Control**: OpenZeppelin Access Control
 - **Dependencies**:
-  - OpenZeppelin Contracts for security best practices
+  - OpenZeppelin Contracts
   - Custom interfaces for cross-contract communication
   - SafeERC20 for secure token transfers
 
