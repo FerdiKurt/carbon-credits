@@ -4,7 +4,7 @@ A blockchain-based system for tokenizing, issuing, trading, and retiring carbon 
 
 ## Overview
 
-This platform provides a robust framework for managing the lifecycle of carbon credits on the blockchain. By leveraging Ethereum's ERC-1155 token standard, the system enables transparent tracking of carbon credit projects and their associated credits while ensuring proper certification and verification.
+This platform provides a framework for managing the lifecycle of carbon credits on the blockchain. By leveraging Ethereum's ERC-1155 token standard, the system enables transparent tracking of carbon credit projects and their associated credits while ensuring proper certification and verification.
 
 ## Key Components
 
